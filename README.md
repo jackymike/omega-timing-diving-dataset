@@ -36,3 +36,55 @@ Modern tables come from official Omega Timing results PDFs (World Aquatics / Eur
 - `EventDate` is missing on some older meets.
 - Judge names are not always recoverable from the PDF layout (`JudgeName1` is missing on about half of modern dives).
 - Omega PDFs do not include judge nationality; use `judge_country_lookup.csv` (126 names, 43 countries) or `Diving2000.csv` (`JCountry` is complete).
+
+
+# Parser
+
+Parse Omega Timing diving results books into CSVs
+
+## Setup
+
+```bash
+conda env create -f environment.yml
+conda activate datasci112
+```
+
+## Add a meet
+
+Edit `config/meets.yaml`. Minimum fields:
+
+```yaml
+- id: some_meet_id
+  name: Display Name
+  event_page: https://www.omegatiming.com/...-live-results
+```
+
+`pdf_url` is optional — discovered automatically if missing.
+
+## Download PDFs
+
+```bash
+python -m src --discover-pdfs          # find/save pdf_url for each meet
+python -m src --download-pdfs          # cache PDFs under data/raw/pdfs/
+python -m src --meet antalya_2025 --download-pdfs
+python -m src --download-pdfs --force-download   # re-download
+```
+
+PDFs are fetched from live Omega via Google Chrome (first page load can take ~30s; 4s pause between files), then Wayback Machine if Chrome cannot get them. Use `--skip-omega` for Wayback only.
+
+Requires Playwright (`pip install playwright`) and Google Chrome.
+
+## Parse
+
+```bash
+python -m src                          # all meets in meets.yaml
+python -m src --meet singapore_2025    # one meet
+```
+
+Writes / upserts (by `MeetId`) into:
+
+- `data/processed/scores.csv`
+- `data/processed/judges.csv`
+- `data/processed/judge_scores.csv`
+
+Individual events only (1m / 3m / 10m). Synchro and team events are skipped.
